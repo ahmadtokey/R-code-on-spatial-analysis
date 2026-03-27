@@ -1,0 +1,433 @@
+---
+title: "lab6"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#rm(list = ls()) # clear workspace so you don't mistakenly use old data with the same names. 
+
+#ls()
+library(sf)
+library(GISTools)
+data(newhaven)
+
+```
+
+```{r}
+blocks_sf <- st_as_sf(blocks)
+breach_sf <- st_as_sf(breach)
+tracts_sf <- st_as_sf(tracts)
+```
+
+```{r}
+summary(blocks)
+class(blocks)
+class(blocks_sf)
+```
+
+```{r}
+summary(tracts)
+class(tracts)
+class(tracts_sf)
+```
+
+```{r}
+summary(breach)
+class(breach)
+class(breach_sf)
+```
+
+```{r}
+head(data.frame(blocks_sf))
+```
+
+```{r}
+head(data.frame(blocks_sf))
+```
+
+```{r}
+head(data.frame(blocks_sf$P_VACANT))
+```
+
+```{r}
+head(blocks_sf$P_VACANT) # not as a dataframe output
+```
+
+```{r}
+hist(blocks_sf$P_VACANT)
+```
+
+```{r}
+plot(breach_sf)
+```
+
+```{r}
+breach.dens = st_as_sf(kde.points(breach,lims=tracts))
+summary(breach.dens)
+```
+
+```{r}
+head(breach.dens)
+```
+
+```{r}
+plot(breach.dens)
+```
+
+## Mapping polygons with attributes
+
+```{r}
+library(tmap)
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC")
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_FEMALES")
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", breaks=seq(0, 100, by=25))
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", breaks=c(10, 40, 60, 90))
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", breaks=c(10, 40, 60, 90))
+```
+
+```{r}
+display.brewer.all()
+```
+
+```{r}
+brewer.pal(5,'Blues')
+
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", title = "Owner Occ", palette = "Blues") +
+  tm_layout(legend.title.size = 1)
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_fill("P_OWNEROCC", title = "Owner Occ", palette = "Blues") +
+  tm_layout(legend.title.size = 1)
+```
+
+```{r}
+# with style = kmeans
+p1 <- tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", title = "Owner Occ", palette = "Blues",
+  style = "kmeans") +
+  tm_layout(legend.title.size = 0.7)
+p1
+```
+
+```{r}
+# with style = kmeans
+p2 <- tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", title = "Owner Occ", palette = "Reds",
+  style = "jenks") +
+  tm_layout(legend.title.size = 0.7)
+p2
+```
+
+```{r}
+# with style = kmeans
+p3 <- tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", title = "Owner Occ", palette = "Set3",
+  style = "quantile") +
+  tm_layout(legend.title.size = 0.7)
+p3
+```
+
+```{r}
+# Multiple plots using the grid package
+library(grid)
+grid.newpage()
+# set up the layout
+pushViewport(viewport(layout=grid.layout(1,3)))
+# plot using the print command
+print(p1, vp=viewport(layout.pos.col = 1, height = 5))
+```
+```{r}
+print(p2, vp=viewport(layout.pos.col = 2, height = 5))
+```
+
+```{r}
+print(p3, vp=viewport(layout.pos.col = 3, height = 5))
+```
+
+
+## My Turn 02
+
+```{r}
+tmap_arrange(p1,p2,p3, ncol=3, nrow=1)
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("P_OWNEROCC", title = "Owner Occ", palette = "-BuPu", # negative sign for reverse color scheme 
+      breaks = c(0, round(quantileCuts(blocks$P_OWNEROCC, 6), 1)), 
+      legend.hist = T) +
+  tm_scale_bar(width = 0.22) + # add a scale bar
+  tm_compass(position = c(0.8, 0.07)) + # add a North arrow
+  tm_layout(frame = F, title = "New Haven", 
+      title.size = 2, title.position = c(0.55, "top"), 
+      legend.hist.size = 0.5)
+```
+
+
+```{r}
+# add a projection to tracts data and convert tracts data to sf
+proj4string(tracts) <- proj4string(blocks)
+tracts_sf <- st_as_sf(tracts)
+tracts_sf <- st_transform(tracts_sf, "+proj=longlat +ellps=WGS84")
+# Or you can use
+# tracts_sf <- st_transform(tracts_sf, crs = 4326)
+
+# plot 
+tm_shape(blocks_sf) +
+    tm_fill(col="POP1990", convert2density=TRUE,
+        style="kmeans", title=expression("Population (per " * km^2 * ")"), 
+        legend.hist=F, id="name") +
+    tm_borders("grey25", alpha=.5) + 
+  # add tracts context
+    tm_shape(tracts_sf) +
+      tm_borders("grey40", lwd=2) + 
+    tm_layout(bg.color="white", frame = FALSE, 
+    legend.hist.bg.color="grey90")
+```
+```{r}
+# add an area in km^2 to blocks dataset
+blocks_sf$area = st_area(blocks_sf) / (1000*1000)
+# calculate population density manually
+summary(blocks_sf$POP1990/blocks_sf$area)
+```
+```{r}
+tm_shape(blocks_sf) +
+  tm_fill(c("P_RENTROCC", "P_BLACK")) +
+  tm_borders() +
+  tm_layout(legend.format = list(digits = 0), 
+            legend.position = c("left", "bottom"),
+            legend.text.size = 0.5,
+            legend.title.size = 0.8)
+```
+
+## Mapping points with attributes
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("white") +
+  tm_shape(breach_sf) +
+  tm_dots(size = 0.5, shape = 19, col = "red", alpha = 1)
+```
+
+```{r}
+tm_shape(blocks_sf) +
+  tm_polygons("white") +
+  tm_shape(breach_sf) +
+  tm_dots(size = 0.5, shape = 19, col = "red", alpha = 0.5)
+```
+
+```{r}
+# load the data
+data(quakes)
+# look at the first 6 records
+head(quakes)
+```
+
+```{r}
+quakes_sf <- st_as_sf(quakes,coords=c("long", "lat"), crs = 4326)
+
+tm_shape(quakes_sf) +
+  tm_dots(size = 0.5, alpha = 0.3)
+```
+
+```{r}
+library(grid)
+# by size
+p1 <- tm_shape(quakes_sf) +
+  tm_bubbles("depth", scale = 1, shape = 19, alpha = 0.3, 
+      title.size="Quake Depths")
+# by colour
+p2 <- tm_shape(quakes_sf) +
+  tm_dots("depth", shape = 19, alpha = 0.5, size = 0.6, 
+          palette = "PuBuGn", 
+      title="Quake Depths")
+# Multiple plots using the grid package
+grid.newpage()
+# set up the layout
+pushViewport(viewport(layout=grid.layout(1,2)))
+# plot using he print command
+print(p1, vp=viewport(layout.pos.col = 1, height = 5))
+print(p2, vp=viewport(layout.pos.col = 2, height = 5))
+```
+```{r}
+tmap_arrange(p1,p2,ncol=2)
+```
+
+## My turn 03
+
+```{r}
+#This code worked and generated output. However, during knitting, it was throwing an error about list and double object conflict, which I tried to solve. Therefore, I am commenting these codes out. 
+
+tmp = dplyr::filter(quakes_sf, mag > 5.5)
+summary(tmp)
+
+
+
+```
+
+```{r}
+tm_shape(tmp) +   tm_dots(col = brewer.pal(5, "Reds")[4], shape = 19, alpha = 0.5, size = 1) + tm_layout(title="Quakes > 5.5",  title.position = c("centre", "top"))
+```
+
+## Mapping lines with attributes
+```{r}
+data(newhaven)
+proj4string(roads) <- proj4string(blocks)
+
+# 1. create a clip area (bounding box or bb)
+# xmin <- bbox(road_sf)[1,1] #-72.99826
+# ymin <- 41.2471#bbox(roads)[2,1]
+# xmax <- -72.86161#xmin + diff(bbox(roads)[1,]) / 2
+# ymax <- 41.3501# ymin + diff(bbox(roads)[2,]) / 2
+# xx = as.vector(c(xmin, xmin, xmax, xmax, xmin))
+# yy = as.vector(c(ymin, ymax, ymax, ymin, ymin))
+
+xmin <- bbox(roads)[1,1]
+ymin <- bbox(roads)[2,1]
+xmax <- xmin + diff(bbox(roads)[1,]) / 2
+ymax <- ymin + diff(bbox(roads)[2,]) / 2
+xx = as.vector(c(xmin, xmin, xmax, xmax, xmin))
+yy = as.vector(c(ymin, ymax, ymax, ymin, ymin))
+
+# 2. create a spatial polygon from this
+crds <- cbind(xx,yy)
+Pl <- Polygon(crds)
+ID <- "clip"
+Pls <- Polygons(list(Pl), ID=ID)
+SPls <- SpatialPolygons(list(Pls))
+df <- data.frame(value=1, row.names=ID)
+clip.bb <- SpatialPolygonsDataFrame(SPls, df)
+proj4string(clip.bb) <- proj4string(blocks)
+
+# 3. convert to sf
+# convert the data to sf
+clip_sf <- st_as_sf(clip.bb)
+```
+
+```{r}
+#I got the following error when I tried to plot clip_sf
+#Warning: bounding box has potentially an invalid value range for longlat data
+
+# I then tried for troubleshooting. I found that the extent of "roads" are in meters but they perhaps have to be in decimal degree. So, I transformed the crs (see next chunk), noted the extent latlongs, and manually put in place of xmin, ymin, etc (see previous chunk). Unfortunately, the st_intersection is still not working to create roads_temp. Therefore, I could not proceed to the next codes. 
+```
+
+
+```{r}
+# road_sf<- st_as_sf(roads)
+# road_sf <- st_transform(road_sf, "+proj=longlat +ellps=WGS84")
+# road_sf
+```
+
+```{r}
+# Check blocks' current projection and make sure out clip area has the same projection.
+st_crs(blocks) # NAD27, CRS = 4267 from https://epsg.io/ 
+# Convert crds to a clip area
+crds.df <- data.frame(crds)
+clip_sf <- crds.df %>% # this is a chain command consisting of multiple commands
+  st_as_sf(coords = c("xx", "yy"), crs=4267) %>% 
+  st_bbox() %>% 
+  st_as_sfc()
+plot(clip_sf)
+```
+```{r}
+#roads_sf <- st_transform(roads_sf, crs=st_crs(clip_sf))
+```
+
+
+```{r}
+roads_sf <- st_as_sf(roads)
+roads_sf <- st_transform(roads_sf, crs=st_crs(clip_sf))
+# 
+# x = st_cast(clip_sf)
+# y = roads_sf
+# 
+# st_agr(x) = "constant"
+# st_agr(y) = "constant"
+# 
+# roads_tmp <- st_intersection(x,y)
+sf_use_s2(FALSE)
+roads_tmp <- st_intersection(st_cast(clip_sf), roads_sf)
+colnames(roads_tmp)
+```
+
+## Mapping Raster Data
+```{r}
+library(raster)
+library(sp)
+data(meuse.grid)
+class(meuse.grid)
+```
+
+```{r}
+summary(meuse.grid)
+```
+
+```{r}
+plot(meuse.grid$x, meuse.grid$y, asp = 1)
+```
+
+```{r}
+library(stars)
+meuse.sf <- st_as_sf(meuse.grid, coords = c("x", "y"), crs=28992)
+plot(meuse.sf)
+```
+
+```{r}
+# Turn meuse.sf to stars objects (raster)
+r.meuse.dist<-st_rasterize(meuse.sf %>% dplyr::select(dist, geometry))
+
+# set the tmap mode to plot
+tmap_mode('plot')
+```
+
+```{r}
+# map dist and freq attributes
+tm_shape(r.meuse.dist) +
+  tm_raster(col = "dist", title = "Distance",
+    palette = "Reds", style = "kmeans")
+```
+
+```{r}
+data(World, land, metro)
+
+# Create a customized color palette
+pal8 <- c("#33A02C", "#B2DF8A", "#FDBF6F", "#1F78B4", "#999999", "#E31A1C", "#E6E6E6", "#A6CEE3")
+
+# Map the raster and vector objects
+tm_shape(land, ylim = c(-88,88)) +
+    tm_raster("cover_cls", palette = pal8, title = "Global Land Cover") +
+tm_shape(metro) + tm_dots(col = "#E31A1C") +
+tm_shape(World) +
+    tm_borders(col = "black") +
+tm_layout(scale = .8, 
+    legend.position = c("left","bottom"),
+    legend.bg.color = "white", legend.bg.alpha = .2, 
+    legend.frame = "gray50")
+```

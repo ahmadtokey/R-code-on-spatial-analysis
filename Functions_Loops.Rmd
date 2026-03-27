@@ -1,0 +1,148 @@
+---
+title: "lab7"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+tree.heights <- c(4.3,7.1,6.3,5.2,3.2)
+```
+
+```{r}
+tree.heights # print out everything
+```
+
+
+
+```{r}
+tree.heights[tree.heights < 6]
+```
+
+```{r}
+if (tree.heights[1] < 6) { cat('Tree is small\n') } else 
+  { cat('Tree is large\n')}
+```
+
+
+```{r}
+# Loop through the first 3 elements of tree.heights
+for (i in 1:3) {
+    if (tree.heights[i] < 6) { cat('Tree',i,' is small\n') } # condition & consequent
+    else { cat('Tree',i,' is large\n')}  # alternative condition and consequent/ what you want R to do
+  }
+```
+
+```{r}
+# Loop through all elements of tree.heights (hence length(tree.heights) at the end of the sequence)
+for (i in 1:length(tree.heights)) {
+  if (tree.heights[i] < 6) # condition
+    (tree.heights) # consequent /what you want R to do
+}
+```
+## Program building blocks
+### Condition statements
+```{r}
+x <- -7
+if (x < 0) cat("x is negative")
+```
+
+```{r}
+x <- 8
+if (x < 0) cat("x is negative") # R did nothing because the statement is false.
+```
+
+```{r}
+x <- -7
+if (x < 0) cat("x is negative") else cat("x is positive")
+```
+
+```{r}
+x <- 8
+if (x < 0) cat("x is negative") else cat("x is positive")
+```
+
+
+### code blocks
+```{r}
+x <- c(1,3,6,8,9,5)
+if (all(x > 0)) {
+  cat("All numbers are positive\n") 
+  total <- sum(x)
+  cat("Their sum is ",total) }
+```
+
+```{r}
+x <- c(1,3,6,8,9,-5)
+if (all(x > 0)) {
+  cat("All numbers are positive\n") 
+  total <- sum(x)
+  cat("Their sum is ",total) }  else {
+  cat("Not all numbers are positive\n")
+  cat("This is probably an error as numbers are rainfall levels") }
+```
+
+### Functions
+
+```{r}
+mean.rainfall <- function(rf)  
+{ if (all(rf> 0))                 #open Function
+  { mean.value <- mean(rf)        #open Consequent
+    cat("The mean is ",mean.value) 
+  } else                          #close Consequent
+    { cat("Warning: Not all values are positive\n")  #open Alternative
+    }                             #close Alternative
+  }                               #close Function
+mean.rainfall(c(8.5,9.3,6.5,9.3,9.4))
+```
+
+```{r}
+mean.rainfall2 <- function(rf) {
+if (all(rf> 0)) {
+  return( mean(rf))} else {
+  return(NA)}
+  }
+mr <- mean.rainfall2(c(8.5,9.3,6.5,9.3,9.4))  
+mr
+```
+### Loops and repititions
+```{r}
+for (i in 1:5) {
+    i.cubed <- i * i * i
+    cat("The cube of",i,"is ",i.cubed,"\n")}
+```
+
+```{r}
+for (val in seq(0,1,by=0.25)) {
+    val.squared <- val * val 
+    cat("The square of",val,"is ",val.squared,"\n")}
+```
+
+```{r}
+i <- 1; n <- 654
+repeat{
+  i.squared <- i * i
+  if (i.squared > n) break
+  i <- i + 1}
+cat("The first square number exceeding",n, "is ",i.squared,"\n")
+```
+
+```{r}
+first.bigger.square <- function(n) {
+    i <- 1
+    repeat{
+        i.squared <- i * i
+        if (i.squared > n) break
+        i <- i + 1 }
+    return(i.squared)}
+
+first.bigger.square(76987)
+```
+
+
+
+
+

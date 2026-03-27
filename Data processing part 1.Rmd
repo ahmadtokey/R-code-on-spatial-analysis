@@ -1,0 +1,124 @@
+---
+title: "lab8"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(GISTools)
+library(sf)
+data(newhaven) 
+class(blocks) # this is an sp object
+```
+
+```{r}
+#Convert to sf object
+blocks_sf <- st_as_sf(blocks)
+
+colnames(blocks_sf)
+```
+
+```{r}
+head(blocks_sf[, 14:17]) # check columns 14-17
+```
+
+```{r}
+# We can also do this with sp
+head(blocks@data[, 14:17])
+```
+
+```{r}
+apply(blocks@data[,14:17], 1, max)
+```
+
+
+```{r}
+apply(blocks@data[,14:17], 2, max)
+```
+
+```{r}
+# set up vector to hold result
+result.vector <- vector()
+for (i in 1:nrow(blocks@data)){
+  # for each row determine which column has the max value
+  result.i <- which.max(data.frame(blocks[i,14:17]))
+  # put into the result vector
+  result.vector <- append(result.vector, result.i)
+}
+```
+
+```{r}
+res.vec <-apply(data.frame(blocks[,14:17]), 1, which.max)
+
+# comapre the two results
+identical(as.vector(res.vec), as.vector(result.vector))
+```
+
+```{r}
+t1 <- Sys.time() # to track the time
+result.vector <- vector()
+for (i in 1:nrow(blocks@data)){
+  result.i <- which.max(data.frame(blocks[i,14:17]))
+  result.vector <- append(result.vector, result.i)
+}
+Sys.time() - t1
+```
+
+```{r}
+# Apply
+t1 <- Sys.time()
+res.vec <-apply(data.frame(blocks[,14:17]), 1, which.max)
+Sys.time() - t1
+```
+
+```{r}
+data(georgia)
+class(georgia2)
+```
+
+```{r}
+plot(bbox(georgia2)[1,], bbox(georgia2)[2,], asp = 1, 
+     type='n',xlab='',ylab='',xaxt='n',yaxt='n',bty='n')
+for (i in 1:length(georgia.polys)){
+  points(georgia.polys[[i]], type='l')
+  # small delay so that you can see the plotting
+  Sys.sleep(0.05)
+}
+```
+
+```{r}
+plot(bbox(georgia2)[1,], bbox(georgia2)[2,], asp = 1, 
+     type='n',xlab='',ylab='',xaxt='n',yaxt='n',bty='n')
+invisible(mapply(polygon,georgia.polys))
+```
+
+## Dplyr
+```{r}
+#install.packages("nycflights13")
+library(tidyverse)
+library(nycflights13)
+class(flights)
+```
+
+```{r}
+flights
+```
+```{r}
+flights2 <- flights %>% 
+  select(year:day,hour,origin,dest,tailnum,carrier)
+```
+
+```{r}
+flights2 <- flights %>% 
+  dplyr::select(year:day,hour,origin,dest,tailnum,carrier)
+```
+
+
+
+
+
+

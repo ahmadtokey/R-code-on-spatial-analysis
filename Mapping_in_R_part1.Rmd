@@ -1,0 +1,250 @@
+---
+title: "lab 5"
+output: html_document
+date: "2022-09-13"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+GISTools <- "https://cran.r-project.org/src/contrib/Archive/GISTools/GISTools_0.7-4.tar.gz"
+#install.packages(GISTools, repos=NULL, type="source", dependencies = TRUE)
+#install.packages("gridExtra")
+#install.packages("ggthemes")
+#install.packages("ggspatial")
+library(sf)
+library(GISTools)
+library(tmap)
+library(gridExtra)
+```
+
+```{r}
+data(georgia)
+
+# Turn georgia into an sf object
+georgia_sf <- st_as_sf(georgia) 
+
+#make a quick map
+qtm(georgia, fill = "blue", style = "natural")
+```
+
+```{r}
+qtm(georgia_sf, fill="MedInc", text="Name", text.size=0.5, #The Name column shows county names
+    format="World", style="classic", 
+    text.root=5, fill.title="Median Income")
+```
+
+
+
+## My turn 01
+```{r}
+#par(mfrow = c(1,2))
+p1<-qtm(georgia_sf, fill="PctPov", text="Name", text.size=0.5, #The Name column shows county names
+    format="World", style="cobalt", 
+    text.root=5, fill.title="percentage of poverty")
+
+p2<-qtm(georgia_sf, fill="TotPop90", text="Name", text.size=0.5, #The Name column shows county names
+    format="World", style="gray", 
+    text.root=5, fill.title="Total population")
+
+tmap_arrange(p1,p2)
+```
+
+```{r}
+g <- st_union(georgia_sf)
+tmap_mode("view")
+tm_shape(georgia_sf) +  
+  tm_fill("tomato") +  
+  tm_borders(lty = "dashed", col = "gold") + # add the county borders
+  tm_style("natural", bg.color = "grey90") + # add some styling
+  tm_shape(g) + # add the outline, using another tm_shape()
+  tm_borders(lwd = 2) +
+  tm_basemap("Esri.WorldGrayCanvas") # add basemap
+```
+
+```{r}
+tmap_mode("plot")
+
+tm_shape(georgia_sf) +
+  tm_fill("tomato") +
+  tm_borders(lty = "dashed", col = "gold") +
+  tm_style("natural", bg.color = "grey90") +
+  tm_shape(g) +
+  tm_borders(lwd = 2) +
+    tm_layout(title = "The State of Georgia", 
+    title.size = 1, title.position = c(0.55, "top")) +
+  tm_basemap("Esri.WorldGrayCanvas") # add basemap
+```
+
+```{r}
+# 1st plot of georgia
+t1 <- tm_shape(georgia_sf) +
+  tm_fill("coral") +
+  tm_borders() +
+  tm_layout(bg.color = "grey85") 
+  # + tm_basemap(NULL) # remove basemap # add this if you want to remove basemap
+# 2nd plot of georgia2
+t2 <- tm_shape(georgia2) +
+  tm_fill("orange") +
+  tm_borders() +
+  # the asp paramter controls aspect
+  # this is makes the 2nd plot align
+  tm_layout(asp = 0.86,bg.color = "grey95") 
+  # + tm_basemap(NULL) # add this if you want to remove basemap
+
+
+tmap_arrange(t1, t2)
+```
+
+```{r}
+data.frame(georgia_sf)[,13]
+```
+
+```{r}
+tm_shape(georgia_sf) +
+  tm_fill("white") +
+  tm_borders() +
+  tm_text("Name", size = 0.5) +
+  tm_layout(frame = FALSE) +
+  tm_basemap(NULL)
+```
+
+```{r}
+selected.counties <- c('Jefferson', 'Jenkins', 'Johnson', 'Washington', 'Glascock', 'Emanuel', 
+                       'Candler', 'Bulloch', 'Screven', 'Richmond', 'Burke')
+# select all rows that has Name equals to one of the values in selected.counties, all select all columns.  
+georgia_sf.sub <- georgia_sf[georgia_sf$Name %in% selected.counties, ]
+
+tm_shape(georgia_sf.sub) +
+  tm_fill("gold1") +
+  tm_borders("grey") +
+  tm_text("Name", size = 1) +
+  # add the outline
+  tm_shape(g) +
+  tm_borders(lwd = 2) +
+  tm_basemap(NULL) +
+  # specify some layout parameters
+  tm_layout(frame = FALSE, title = "A subset of Georgia", 
+    title.size = 1.5, title.position = c(0., "bottom"))
+
+
+```
+
+```{r}
+# the 1st layer
+tm_shape(georgia_sf) +
+  tm_fill("white") +
+  tm_borders("grey", lwd = 0.5) +
+  # the 2nd layer
+  tm_shape(g) +
+  tm_borders(lwd = 2) +
+  # the 3rd layer
+  tm_shape(georgia_sf.sub) +
+  tm_fill("lightblue") +
+  tm_borders() +
+  # specify some layout parameters
+  tm_layout(frame = T, title = "Georgia with a subset of counties", 
+    title.size = 1, title.position = c(0.02, "bottom"))
+```
+
+```{r}
+#getwd()
+#setwd("D:/OneDrive - The Ohio State University/Courses/GEOG 5229 SP22/Labs") # I have commented this since I don't want to reset my working directory
+
+library(GISTools)
+data(newhaven)
+proj4string(roads) <- proj4string(blocks)
+
+
+png(file='map_lab5.png')
+# pdf(file='map2.pdf') # Use this if you want to create a PDF output. 
+
+# plot spatial data
+tm_shape(blocks) +
+    tm_borders() +
+tm_shape(roads) +
+tm_lines(col = "red") +
+tm_scale_bar(width = 0.22) +
+tm_compass(position = c(0.8, 0.07)) +
+tm_layout(frame = F, title = "New Haven, CT", 
+            title.size = 1.5, 
+            title.position = c(0.55, "top"), 
+            legend.outside = T) 
+
+dev.off() # Need this after the save command to switch back to plotting mode.
+```
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(ggspatial)
+```
+```{r}
+map.pov <- ggplot(georgia_sf) +
+  annotation_map_tile(zoomin = 0, type = "cartolight", progress = "none") +
+  geom_sf(aes(fill = PctPov), color = NA, alpha = 0.5) +
+  scale_fill_viridis_c(
+    name = "Percent below poverty", 
+                       option = "B",
+    begin = 1, end = 0) +
+  theme_map() +
+  labs(caption = "OpenStreetMap",
+       title = "Poverty rate")
+       # ,subtitle = "")
+  
+map.pov
+```
+
+
+## my turn 02
+```{r}
+map.inc <- ggplot(georgia_sf) +
+  annotation_map_tile(zoomin = 0, type = "cartolight", progress = "none") +
+  geom_sf(aes(fill = MedInc), color = NA, alpha = 0.5) +
+  scale_fill_viridis_c(
+    name = "Median Household income", 
+                       option = "B",
+    begin = 1, end = 0) +
+  theme_map() +
+  labs(caption = "OpenStreetMap",
+       title = "Poverty rate")
+       # ,subtitle = "")
+  
+map.rural <- ggplot(georgia_sf) +
+  annotation_map_tile(zoomin = 0, type = "cartolight", progress = "none") +
+  geom_sf(aes(fill = PctRural), color = NA, alpha = 0.5) +
+  scale_fill_viridis_c(
+    name = "Percent rural", 
+                       option = "B",
+    begin = 1, end = 0) +
+  theme_map() +
+  labs(caption = "OpenStreetMap",
+       title = "Poverty rate")
+       # ,subtitle = "")
+grid.arrange(map.inc,map.rural, ncol = 2)  
+
+```
+
+```{r}
+#install.packages("egg")
+library(egg)
+```
+
+```{r}
+all_maps <- ggarrange(map.pov, map.inc, map.rural,
+            labels = c("a.", "b.", "c."),
+            ncol = 3, nrow = 1)
+```
+
+```{r}
+all_maps
+```
+
+```{r}
+ggsave(filename = "map3.png", 
+       plot = all_maps, width = 16.5, height = 10.5, units = "in")
+```
+

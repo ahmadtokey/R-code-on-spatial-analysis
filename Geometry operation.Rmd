@@ -1,0 +1,234 @@
+---
+title: "lab11"
+output: html_document
+date: "2022-09-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(GISTools)
+library(sf)
+library(terra)
+library(spData)
+library(tmap)
+```
+
+# Manipulating geometry data
+## clipping and intersecting
+
+### prepare the data
+```{r}
+data(tornados)
+class(torn)
+```
+
+```{r}
+class(us_states)
+```
+
+```{r}
+torn_sf <- st_as_sf(torn)
+us_state_sf<- st_as_sf(us_states)
+
+summary(torn_sf)
+```
+```{r}
+st_geometry(torn_sf)
+```
+```{r}
+tm_shape(us_state_sf) +
+  tm_polygons("grey90") +
+  tm_shape(torn_sf) +
+    tm_dots(col="red", size = 0.04, shape = 2, alpha= 0.5) +
+  tm_shape(us_state_sf) +
+    tm_borders(col = "blue") +
+      tm_layout(frame=T)
+
+```
+
+```{r}
+plot(us_states, col="grey90")
+plot(torn, add=T, pch=1, col="orange", cex=0.4)
+plot(us_states, add=T)
+
+```
+
+```{r}
+AoI_sf <- us_state_sf %>% filter(STATE_NAME=="Texas"|STATE_NAME==  "New Mexico"| STATE_NAME== "Oklahoma"| STATE_NAME=="Arkansas")
+
+tm_shape(AoI_sf) +
+  tm_borders(col="black") +
+  tm_shape(torn_sf) +
+    tm_dots(col="orange", size=0.2, shape=1, alpha=0.5) +
+  tm_layout(frame=F)
+```
+```{r}
+AoI <- as_Spatial(AoI_sf)
+
+plot(AoI)
+plot(torn, add=T, pch=1, col="orange")
+```
+### Clipping and intersecting data
+
+```{r}
+torn_clip_sf <- torn_sf[AoI_sf,]
+
+tm_shape(AoI_sf) +
+  tm_borders(col="black") +
+  tm_shape(torn_clip_sf) +
+    tm_dots(col="orange", size=0.2, shape=1, alpha=0.5) +
+  tm_layout(frame=F)
+
+```
+```{r}
+AoI_torn_sf <- st_intersection(AoI_sf, torn_sf)
+
+tm_shape(AoI_sf) + tm_borders(col="Black") + tm_layout(frame=F) +
+  tm_shape(AoI_torn_sf) + tm_dots(col="orange", size=0.2, shape=1, alpha=0.5)
+
+```
+
+## Buffering
+```{r}
+us_states2_sf <- st_as_sf(us_states2)
+AoI_sf <- st_as_sf(us_states2_sf[us_states2_sf$STATE_NAME=="Texas",])
+
+AoI_buf_sf <- st_buffer(AoI_sf, dist=25000)
+
+qtm(AoI_buf_sf, fill="orange") + qtm(AoI_sf)
+
+```
+
+```{r}
+tm_shape(AoI_buf_sf) + tm_borders("black") + tm_shape(AoI_sf) + tm_borders("blue") + tm_layout(frame=F)
+```
+## My turn 1
+```{r}
+library(GISTools)
+data("georgia")
+
+georgia_sf <- st_as_sf(georgia)
+
+georgia_buf <- st_buffer(georgia_sf, dist=5000)
+
+tm_shape(georgia_sf) + tm_borders("black") + tm_shape(georgia_buf) + tm_borders("blue")
+```
+
+## Merging spatial feature
+```{r}
+class(us_state_sf)
+AoI.merge_sf <- st_sf(st_union(us_state_sf))
+
+tm_shape(us_state_sf) + tm_borders("darkgreen", lty=3) + tm_shape(AoI.merge_sf) + tm_borders("black", lwd=2) + tm_layout(frame=F)
+
+
+```
+## creating centroids
+
+```{r}
+states_centroid <- st_centroid(us_state_sf)
+
+qtm(us_state_sf) + qtm (states_centroid, symbols.col = "orange")
+```
+
+```{r}
+data(nz)
+nz_pos<- st_point_on_surface(nz)
+
+qtm(nz) + qtm(nz_pos, symbols.col = "red")
+```
+
+```{r}
+nz_pos2 <- st_centroid(nz)
+
+qtm(nz) + qtm(nz_pos, symbols.col = "red") + qtm(nz_pos2, symbols.col = "blue")
+```
+
+## transformation
+
+```{r}
+m <- matrix(c(1,3,5,1,3,1), ncol=2)
+m
+```
+```{r}
+multipoint <- st_multipoint(m)
+class(multipoint)
+```
+
+```{r}
+linestring <- st_cast(multipoint, "LINESTRING")
+class(linestring)
+```
+```{r}
+polyg <- st_cast(multipoint, "POLYGON")
+class(polyg)
+```
+## My turn 2
+
+```{r}
+plot(multipoint, col="red", lwd=10) + plot(linestring, add=T, col="blue", lwd=7) + plot(polyg, col="yellow", add=T)
+```
+# calculating spatial attribute
+## point in polygon
+
+```{r}
+torn.counts<- poly.counts(torn, us_states)
+names(torn.counts)
+```
+```{r}
+us_states_sf <- st_as_sf(us_states)
+torn.counts2 <- st_contains(us_states_sf, torn_sf, sparse = TRUE)
+torn.counts2
+
+```
+```{r}
+torn_by_state <- us_state_sf %>% 
+  mutate(torn.count = lengths(st_contains(us_states_sf, torn_sf)))
+
+head(torn_by_state)
+```
+```{r}
+head(torn_by_state$torn.count)
+```
+
+## Area calculation
+
+```{r}
+st_crs(us_states2_sf)
+```
+
+```{r}
+st_area(us_states2_sf)
+```
+
+```{r}
+st_area(us_states2_sf)/1000000
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+

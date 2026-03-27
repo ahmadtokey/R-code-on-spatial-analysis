@@ -1,0 +1,296 @@
+---
+title: "lab12"
+output: html_document
+date: "2022-10-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidycensus)
+library(tidyverse)
+```
+
+# Finding variable
+## Microdata
+
+```{r}
+person_vars2018 <- pums_variables %>%
+  distinct(year, survey, var_code, var_label, data_type, level) %>%
+  filter(level=="person", year == 2018, survey=="acs5")
+
+head(person_vars2018)
+```
+
+
+```{r}
+hh_vars2018 <- pums_variables %>%
+  distinct(year, survey, var_code, var_label, data_type, level) %>%
+  filter(level=="housing", year == 2018, survey=="acs1")
+
+head(hh_vars2018)
+```
+
+
+## Area level data
+
+```{r}
+area_vars_2018 <- load_variables(2018, "acs1")
+head(area_vars_2018)
+```
+
+
+```{r}
+area_vars_2010 <- load_variables(2010, "sf1")
+head(area_vars_2010)
+```
+
+# Loading variables
+```{r, echo=FALSE}
+person_data <- get_pums(variables=c("TEN", "SEX", "PINCP", "WKHP","JWMNP"), state = "TX", year = 2018, survey="acs1", recode=TRUE) %>%
+  filter(JWMNP>0)
+```
+
+
+```{r}
+person_data <- person_data %>% subset(select=c(TEN_label, SEX_label, PINCP, WKHP, JWMNP))
+
+person_data
+```
+
+
+
+```{r}
+knitr::kable(person_data[1:10,])
+```
+```{r, echo=FALSE}
+hh_data <- get_pums(variables=c("TEN", "YBL", "BDSP", "GRNTP","BLD","LNGI"), state = "NY", year = 2018, survey="acs1", recode=TRUE) %>%
+  filter(TEN_label=="Rented") %>%
+  mutate(age_struct= case_when(
+    YBL_label=="1939 or earlier" ~ 100,
+    YBL_label=="1940 to 1949" ~ 73,
+    YBL_label=="1950 to 1959" ~ 63,
+    YBL_label=="1960 to 1969" ~ 53,
+    YBL_label=="1970 to 1979" ~ 43,
+    YBL_label=="1970 to 1989" ~ 33,
+    YBL_label=="1990 to 1999" ~ 23,
+    YBL_label=="2000 to 2004" ~ 16,
+    YBL_label=="2005" ~ 13,
+    YBL_label=="2006" ~ 12,
+    YBL_label=="2007" ~ 11,
+    YBL_label=="2008" ~ 10,
+    YBL_label=="2009" ~ 9,
+    YBL_label=="2010" ~ 8,
+    YBL_label=="2011" ~ 7,
+    YBL_label=="2012" ~ 6,
+    YBL_label=="2013" ~ 5,
+    YBL_label=="2014" ~ 5,
+    YBL_label=="2015" ~ 3,
+    YBL_label=="2016" ~ 2,
+    YBL_label=="2017" ~ 1,
+    YBL_label=="2018" ~ 0,)) %>%
+  subset(select=c(age_struct, BDSP, GRNTP, BLD_label, LNGI_label))
+```
+
+
+```{r}
+hh_data
+```
+
+
+
+```{r}
+pop_vars <- c(workers_16 = "B23025_002",
+          unemp_pop_16 = "B23025_005",
+          college_25 = "B23006_023",
+          popln_25 = "B23006_001",
+          med_income = "B06011_001",
+          tot_pop = "B01003_001",
+          white_pop = "B01001A_001")
+
+rural_vars <- c(total_hh = "H002001",
+                rural_hh = "H002005")
+
+counties2018 <- get_acs(geography = "county", variables=pop_vars, output="wide", year=2018, survey="acs1")
+
+counties_rural <- get_decennial(geography = "county", variables = rural_vars, output = "wide", year=2010)
+
+counties <- inner_join(counties2018, counties_rural, by="GEOID") %>%
+  mutate(pct_college=college_25E/popln_25E,
+         unemp_rate=unemp_pop_16E/workers_16E,
+         majority_white=white_popE, tot_popE > 0.5,
+         rural=rural_hh==total_hh) %>%
+  subset(select=c(pct_college, unemp_rate, majority_white, rural, med_incomeE))
+  
+counties
+
+```
+# My turn 1
+
+```{r}
+tracts_2019 <- get_acs(geography ="tract", variables = pop_vars, state = "CA", county = "Los Angeles", output = "wide", year = 2019, survey = "acs5"  )
+
+tracts <- tracts_2019 %>%
+  mutate(pct_college = college_25E / popln_25E,
+         unemp_rate = unemp_pop_16E / workers_16E,
+         majority_white = white_popE / tot_popE > 0.5) %>%
+  subset(select=c(GEOID, pct_college, unemp_rate, majority_white, med_incomeE))
+
+
+tracts
+
+```
+
+
+
+# Downloading TIGER Shapefiles
+
+
+```{r, echo=FALSE}
+library(tigris)
+library(sf)
+
+urban <- urban_areas()
+```
+
+
+```{r}
+cbus <- urban %>%
+  st_transform(26917) %>%
+  filter(str_detect(NAMELSAD10, "Columbus, OH"))
+```
+
+
+```{r}
+```
+
+# My turn 2
+
+```{r}
+LA <- urban %>%
+  st_transform(26917) %>%
+  filter(UACE10== 51445)
+
+LA_sf <- st_as_sf(LA)
+
+library(tmap)
+tmap_mode("view")
+tm_shape(LA_sf) + tm_polygons("UACE10")
+
+```
+
+# My turn 3
+
+I have found that the urban areas and metro divisions boundaries are different for Boston area. So, I used both boundaries to show the water bodies. Since Boston is speaded over five counties, I filtered water bodies of those five counties and intersected that with the two areal boundaries mentioned above. In the below code chunk, I first showed with the metro division.  
+
+```{r, echo=FALSE}
+#Loading boston metropolitan area
+place <- metro_divisions()
+```
+
+
+```{r, echo=FALSE}
+#filtering metro division that has boston, MA in their names
+boston <- place %>%
+  st_transform(26917) %>%
+  filter(str_detect(NAMELSAD, "Boston, MA"))
+
+
+# loading and joining water bodies of three counties in MA that is within Boston
+
+waterN <- area_water(state = "MA", county = "Norfolk")
+waterS <- area_water(state = "MA", county = "Suffolk")
+waterP <- area_water(state = "MA", county = "Plymouth")
+waterE <- area_water(state = "MA", county = "Essex")
+waterM <- area_water(state = "MA", county = "Middlesex")
+
+water <- rbind(waterN,waterP,waterS, waterE,waterM) %>% st_transform(26917)
+
+water1 <- water[boston, ]
+
+```
+
+
+```{r}
+#plot both
+
+
+tm_shape(boston) + tm_borders("black", lwd = 2.5)+
+  tm_shape(water1) + tm_fill("orange")
+```
+
+
+The following chunk shows output for Boston urban areas 
+```{r}
+
+boston2 <- urban %>%
+  st_transform(26917) %>%
+  filter(str_detect(NAMELSAD10, "Boston, MA"))
+
+water2 <- water[boston2, ]
+
+tm_shape(boston2) + tm_borders("black", lwd = 1.5)+
+  tm_shape(water2) + tm_fill("orange")
+```
+
+
+# Downloading data from OSM
+
+```{r}
+library(dplyr)
+library(tmap)
+library(sp)
+library(stringi)
+library(osmextract)
+
+dir.create("Boston data")
+SLO_file <- oe_match("Boston")
+SLO_streets <- oe_read(SLO_file$url, provider = "openstreetmap_fr", download_directory = "Boston data", layer= "lines", quiet = TRUE) %>%
+  filter(!is.na(highway))
+
+```
+
+# My Turn 4
+
+```{r}
+#first take the boundary of Cleveland urban area
+cleveland <- urban %>%
+  st_transform(26917) %>%
+  filter(str_detect(NAMELSAD10, "Cleveland, OH"))
+
+tm_shape(cleveland) + tm_borders()
+# Now download the streets of Cleveland
+dir.create("Cleveland data")
+SLO_fileC <- oe_match("Cleveland")
+SLO_streetsC <- oe_read(SLO_fileC$url, provider = "openstreetmap_fr", download_directory = "Cleveland data", layer= "lines", quiet = TRUE) %>%
+  filter(!is.na(highway)) %>% 
+  st_transform(26917)
+
+# Clip the streets that fall under the Cleveland boundary
+
+SLO_streetsC <- SLO_streetsC[cleveland, ]
+
+```
+
+# My Turn 5
+
+```{r}
+
+dir.create("Cleveland data")
+SLO_fileC <- oe_match("Cleveland")
+
+SLO_pointsC <- oe_read(SLO_fileC$url, provider = "openstreetmap_fr", download_directory = "Cleveland data", layer= "lines", quiet = TRUE) %>%
+  filter(str_detect(other_tags, '"amenity"=>"bicycle_parking"'))%>%
+  st_transform(26917)
+
+
+head(SLO_pointsC$other_tags)
+#mapping parking data
+
+tm_shape(SLO_pointsC) + tm_lines("red",lwd = 5)
+```
+
+         
+         
